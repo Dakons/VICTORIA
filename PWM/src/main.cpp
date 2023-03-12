@@ -10,7 +10,7 @@ int dutyCycle = 50;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ledcSetup(LEDC_CHANNEL, freq, 8);
   ledcAttachPin(LED_PIN, LEDC_CHANNEL);
   ledcWrite(LEDC_CHANNEL, dutyCycle * 255 / 100);
