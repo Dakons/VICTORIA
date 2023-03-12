@@ -5,8 +5,8 @@
 #define LEDC_TIMER 0
 #define LED_PIN 2
 
-int freq = 10;
-int dutyCycle = 50;
+int freq = 0;
+int dutyCycle = 0;
 
 void setup()
 {
@@ -29,7 +29,7 @@ void loop()
   }
   delay(100);
 
-
+/*
   float period = 1.0 / freq; // вычисляем длительность периода ШИМ
   float pulse_width = (dutyCycle / 100.0) * period; // вычисляем длительность импульса ШИМ
   float space_width = period - pulse_width; // вычисляем длительность пробела ШИМ
@@ -41,4 +41,6 @@ void loop()
   Serial.print(space_width);
   Serial.println(" us");
   delay(1000);
+
+  */
 }
