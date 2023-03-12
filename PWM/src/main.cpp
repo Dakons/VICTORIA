@@ -1,29 +1,30 @@
 #include <Arduino.h>
 #include "esp32-hal-ledc.h"
 
-int freq = 2;
-int ledChannel = 0;
-int resolution = 8;
+#define LEDC_CHANNEL 0
+#define LEDC_TIMER 0
+#define LED_PIN 2
+
+int freq = 10;
 int dutyCycle = 50;
-int ledPin = 2;
 
 void setup()
- {
+{
   Serial.begin(9600);
-  pinMode(5, INPUT);
-  pinMode(15, INPUT);
-  pinMode(4, OUTPUT);
-  pinMode(23, OUTPUT);
-  digitalWrite(23, HIGH);
-  ledcSetup(ledChannel, freq, resolution);
-  ledcAttachPin(ledPin, ledChannel);
+  ledcSetup(LEDC_CHANNEL, freq, 8);
+  ledcAttachPin(LED_PIN, LEDC_CHANNEL);
+  ledcWrite(LEDC_CHANNEL, dutyCycle * 255 / 100);
 }
 
-void loop() {
-  //ledcWrite(0, dutyCycle * 255 / 100); // задаем скважность в ШИМ-сигнале
-  //ledcWrite(ledChannel, dutyCycle);
-digitalWrite(4, HIGH);
-  Serial.println("Сигнал на пине 18: " + String(analogRead(15)));
-
-delay(250);
+void loop()
+ {
+  
+  // читаем новые значения частоты и заполнения с монитора порта
+  if (Serial.available() > 0) {
+    freq = Serial.parseInt();
+    dutyCycle = Serial.parseInt();
+    ledcWriteTone(LEDC_TIMER, freq);
+    ledcWrite(LEDC_CHANNEL, dutyCycle * 255 / 100);
+  }
+  delay(100);
 }
