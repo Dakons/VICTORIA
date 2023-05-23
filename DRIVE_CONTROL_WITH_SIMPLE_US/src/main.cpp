@@ -26,6 +26,11 @@ void setup()
 
 //pinMode(ECHO, INPUT); Обозначение работы
 //pinMode(TRIG, OUTPUT);
+//Пины управления драйвером
+pinMode(IN1, OUTPUT);
+pinMode(IN2, OUTPUT);
+pinMode(IN3, OUTPUT);
+pinMode(IN4, OUTPUT);
 
  Serial.begin(9600);
 
@@ -33,6 +38,7 @@ void setup()
 
 void loop() 
 {
+
 Serial.println(ReadAndFilterUS());
 
 DriveCyl(ReadAndFilterUS());
@@ -55,7 +61,7 @@ float ReadAndFilterUS ()
     if (delta > 1) k = 0.7;                                 // если большое - резкий коэффициент
     else k = 0.1;                                           // если маленькое - плавный коэффициент
 
-    dist_filtered = dist * k + dist_filtered * (1 - k);     // фильтр "бегущее среднее"
+    dist_filtered += (dist_filtered - dist) * k;     // фильтр "бегущее среднее"
 
     sensTimer = millis();                                   // сбросить таймер
 
