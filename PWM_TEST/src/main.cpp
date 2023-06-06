@@ -136,7 +136,7 @@ void serialPWM()
       configurePWM(freq, dc);
       Motor_Drive(mode);
      
-
+      Serial.println();
       Serial.print("Mode: ");
       Serial.print(mode);
       Serial.print(", Frequency: ");
