@@ -66,8 +66,9 @@ float ReadAndFilterUS ()
     sensTimer = millis();                                   // сбросить таймер
 
     
-    return dist_filtered;
+    
   }
+  return dist_filtered;
 }
 
 float middle_of_3(float a, float b, float c) 
