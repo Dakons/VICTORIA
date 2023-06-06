@@ -11,15 +11,24 @@ int onTime, offTime, period, total_direction;
 
 void configurePWM(int frequency, int dutyCycle);
 void generatePWM(int pin);
+
 void serialPWM();
+
 void Motor_Drive(int direction);
 
 void setup() 
+
 {
 Serial.begin(115200);
 pinMode(IN1, OUTPUT);
 pinMode(IN2, OUTPUT);
 Motor_Drive(1);
+//configurePWM(4, 90);
+
+ledcSetup(0, 10, 8);
+ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
+
+ledcWrite(0, map(50, 0, 100, 255, 100));
 
 
 }
@@ -28,13 +37,13 @@ void loop()
 
 {
  serialPWM();
- generatePWM(IN1);
+ //generatePWM(IN1);
 
 
 
 }
 
-
+/*
 void configurePWM(int frequency, int dutyCycle) 
 {
 int period = 1000 / frequency; // Период ШИМ (мс)
@@ -53,8 +62,31 @@ onTime = offTime;
 offTime = c;
   break;
 }
+*/
 
+void configurePWM(int frequency, int dutyCycle)
+{
+
+ledcDetachPin(IN1);
+ledcSetup(0, frequency, 8);
+ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
+
+switch (total_direction)
+{
+case 1:
+ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
+  break;
+
+case 2:
+ledcWrite(0, map(dutyCycle, 0, 100, 255, 0));
+  break;
+case 3:
+//ledcDetachPin(IN1);
+break;
 }
+  
+}
+
 
 void generatePWM(int pin)
 {
@@ -65,27 +97,57 @@ void generatePWM(int pin)
   delay(offTime); // Задержка для неактивного уровня ШИМ
 }
 
+/*
+void serialPWM()
+{
+ 
+  if (Serial.available() >= 3)
+   {
+    int frequency = Serial.parseInt();
+    if (Serial.read() == ' ') 
+    {
+      int dutyCycle = Serial.parseInt();
+      if (frequency && dutyCycle >= 0 && dutyCycle <= 100)
+       {
+        configurePWM(frequency, dutyCycle);
+        Serial.print("Frequency: ");
+        Serial.print(frequency);
+        Serial.print(" Hz, Duty Cycle: ");
+        Serial.print(dutyCycle);
+        Serial.println("%");
+      }
+    }
+  }
+}
+*/
 void serialPWM() 
 {
-  if (Serial.available() >= 7) { // Изменено условие для чтения 3-х цифр и 2-х пробелов
+  if (Serial.available() >= 5)
+  {
     int mode = Serial.parseInt();
-    char delimiter = Serial.read(); // Читаем первый пробел
-    int frequency = Serial.parseInt();
-    delimiter = Serial.read(); // Читаем второй пробел
-    int dutyCycle = Serial.parseInt();
-    if (delimiter == ' ' && mode >= 1 && mode <= 3 && frequency && dutyCycle >= 0 && dutyCycle <= 100) {
-      Motor_Drive(mode); // Устанавливаем режим работы мотора
-      configurePWM(frequency, dutyCycle);
+    char delimiter = Serial.read();
+    int freq = Serial.parseInt();
+    delimiter = Serial.read();
+    int dc = Serial.parseInt();
+
+    if (delimiter == ' ' && mode >= 1 && mode <= 3 && freq >= 1 && freq <= 10000 && dc >= 0 && dc <= 100)
+    {
+      Motor_Drive(mode);
+      configurePWM(freq, dc);
+      Motor_Drive(mode);
+     
+
       Serial.print("Mode: ");
       Serial.print(mode);
       Serial.print(", Frequency: ");
-      Serial.print(frequency);
+      Serial.print(freq);
       Serial.print(" Hz, Duty Cycle: ");
-      Serial.print(dutyCycle);
+      Serial.print(dc);
       Serial.println("%");
     }
   }
 }
+
 
 
 void Motor_Drive(int direction)
@@ -104,6 +166,7 @@ total_direction = direction;
   break;
 
 case 3: //Тормоз
+ledcDetachPin(IN1);
 digitalWrite(IN1, HIGH);
 digitalWrite(IN2, HIGH);
  }
