@@ -28,7 +28,7 @@ Motor_Drive(1);
 ledcSetup(0, 10, 8);
 ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
 
-ledcWrite(0, map(50, 0, 100, 255, 100));
+ledcWrite(0, 0);
 
 
 }
