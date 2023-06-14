@@ -41,7 +41,7 @@ float ReadAndFilterUS();
 
 float convertToMillimeters(float sensorValue);
 
-void PID_HEIGHT(float VAL_LEFT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
+void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 
 void setup() 
 {
@@ -92,7 +92,21 @@ CRIT_CHECK();
 PID_HEIGHT();
 PID_TILT();
 */
+PID_HEIGHT(600, 400, 1, 0, 0, 600, 400);
+Serial.println("---");
+delay(5000);
 
+PID_HEIGHT(1000, 400, 1, 0, 0, 600, 400);
+Serial.println("---");
+delay(5000);
+
+PID_HEIGHT(2000, 400, 1, 0, 0, 600, 400);
+Serial.println("---");
+delay(5000);
+
+PID_HEIGHT(-2000, -1000, 1, 0, 0, 600, 400);
+Serial.println("---");
+delay(5000);
 }
 
 float ReadAndFilterUS()
