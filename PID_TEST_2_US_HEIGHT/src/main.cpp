@@ -27,7 +27,7 @@ void serialPWM();
 void Motor_Drive(int direction);
 
 
-float HIGH_VAL, LOW_VAL, Err, prevErr, P_H, I_H, D_H, PID_H; //Для пида
+float HIGH_VAL, LOW_VAL, Err_H, prevErr_H, P_H, I_H, D_H, PID_H; //Для пида
 float Curr_1, Curr_2, Curr_3;
 float middle, dist, dist_filtered; // Для фильтрации
 
@@ -165,26 +165,26 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
 
 {
 
-Err = VAL_LEFT + VAL_RIGHT;
-Err /= 2;
+Err_H = VAL_LEFT + VAL_RIGHT;
+Err_H /= 2;
 
-if (Err > HIGH_VAL)
+if (Err_H > HIGH_VAL)
 {
-  Err = Err - HIGH_VAL;
+  Err_H = Err_H - HIGH_VAL;
   
 }
-else if (Err < LOW_VAL)
+else if (Err_H < LOW_VAL)
 {
-  Err = Err - LOW_VAL;
+  Err_H = Err_H - LOW_VAL;
 }
 else
 {
-Err = 0;
+Err_H = 0;
 } 
 
-P_H = Err * Kp;
-I_H = I_H + Err * Ki;
-D_H = (Err - prevErr) * Kd;
+P_H = Err_H * Kp;
+I_H = I_H + Err_H * Ki;
+D_H = (Err_H - prevErr_H) * Kd;
 
 if (I_H>2000.0 || I_H<-2000.0) 
 {
