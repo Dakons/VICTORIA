@@ -4,6 +4,7 @@
 
 #define IN1 2
 #define IN2 15
+#define ENA 5
 
 int onTime, offTime, period, total_direction;
 
@@ -19,12 +20,10 @@ unsigned long sensTimer = 0;
 float dist_3[3] = {0.0, 0.0, 0.0};
 
 
-void configurePWM(int frequency, int dutyCycle);
+void configurePWM(int dutyCycle);
 void generatePWM(int pin);
 
 void serialPWM();
-
-void Motor_Drive(int direction);
 
 
 float HIGH_VAL, LOW_VAL, Err_H, prevErr_H, P_H, I_H, D_H, PID_H; //Для пида
@@ -59,20 +58,18 @@ if (! ina219_1.begin()) {
 //ina219_2.begin();
 */
 Serial.begin(115200);
-
+pinMode(ENA, OUTPUT);
 
 pinMode(IN1, OUTPUT);
 pinMode(IN2, OUTPUT);
-Motor_Drive(3);
-
-//configurePWM(4, 90);
 
 
 ledcSetup(0, 10, 8);
-ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
-
+ledcAttachPin(ENA, 0);  // Привязка пина к каналу ШИМ
 ledcWrite(0, 0);
-//ledcDetachPin(IN1);
+
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, HIGH);
 
 P_H= 0.0;
 I_H = 0.0;
@@ -212,14 +209,14 @@ Serial.println(PID_H);
 
 if (PID_H < 0)
 {
-Motor_Drive(2);
+total_direction = 1;
 PID_H = map(PID_H, 0, -2500, 0, 100);
 
 PID_H = constrain(PID_H, 0, 100);
 }
 else if (PID_H > 0)
 {
-Motor_Drive(1);
+total_direction = 2;
 PID_H = map(PID_H, 0, 2500, 0, 100);
 
 PID_H = constrain(PID_H, 0, 100);
@@ -227,7 +224,7 @@ PID_H = constrain(PID_H, 0, 100);
 }
 else
 {
-Motor_Drive(3);
+total_direction = 3;
 //Serial.println(PID);
 } 
 
@@ -237,60 +234,48 @@ Motor_Drive(3);
 Serial.print(" 2 PID_H - ");
 Serial.println(PID_H);
 
-configurePWM(10, PID_H);
+configurePWM(PID_H);
 
 }
 
 
-void configurePWM(int frequency, int dutyCycle)
+void configurePWM(int dutyCycle)
 {
 
-ledcDetachPin(IN1);
-ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
-ledcSetup(0, frequency, 8);
+switch (total_direction)
+{
+case 1:
+
+//Motor_Drive(1);
+
+
+digitalWrite(IN2, LOW);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
+
+break;
+
+case 2:
+//Motor_Drive(2);
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, LOW);
+ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));//реверснул
+
+
+  break;
+case 3:
+
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, 0);
+
+break;
+}
+
 Serial.print("DC -");
 Serial.println(dutyCycle);
 Serial.print("dir -");
 Serial.println(total_direction);
 
-switch (total_direction)
-{
-case 1:
-ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
-  break;
-
-case 2:
-ledcWrite(0, map(dutyCycle, 0, 100, 255, 0));
-  break;
-case 3:
-//ledcDetachPin(IN1);
-break;
-}
-  
 }
 
-
-void Motor_Drive(int direction)
-{
-total_direction = direction;
-//Serial.println(direction);
- switch (direction)
- {
- case 1: //Если вперёд
-  digitalWrite(IN2, LOW);
-  //digitalWrite(IN1, HIGH);
-  //Настройка pwm
-  break;
- 
- case 2://Если назад
- digitalWrite(IN2, HIGH);
- //digitalWrite(IN1, LOW); 
- //Настройка pwm
-  break;
-
-case 3: //Тормоз
-ledcDetachPin(IN1);
-digitalWrite(IN1, HIGH);
-digitalWrite(IN2, HIGH);
- }
-}

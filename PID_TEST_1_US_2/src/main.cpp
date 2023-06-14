@@ -65,12 +65,6 @@ pinMode(IN1, OUTPUT);
 pinMode(IN2, OUTPUT);
 
 
-digitalWrite(IN1, HIGH);
-digitalWrite(IN2, HIGH);
-
-
-
-
 ledcSetup(0, 10, 8);
 ledcAttachPin(ENA, 0);  // Привязка пина к каналу ШИМ
 ledcWrite(0, 0);
@@ -307,9 +301,6 @@ configurePWM(PID);
 
 void configurePWM(int dutyCycle)
 {
-
-
-
 
 switch (total_direction)
 {
