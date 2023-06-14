@@ -4,6 +4,7 @@
 
 #define IN1 2
 #define IN2 15
+#define ENA 5
 
 int onTime, offTime, period, total_direction;
 
@@ -19,12 +20,11 @@ unsigned long sensTimer = 0;
 float dist_3[3] = {0.0, 0.0, 0.0};
 
 
-void configurePWM(int frequency, int dutyCycle);
-void generatePWM(int pin);
+void configurePWM( int dutyCycle);
 
 void serialPWM();
 
-void Motor_Drive(int direction);
+//void Motor_Drive(int direction);
 
 
 float HIGH_VAL, LOW_VAL, Err, prevErr, P, I, D, PID;
@@ -59,20 +59,24 @@ if (! ina219_1.begin()) {
 //ina219_2.begin();
 */
 Serial.begin(115200);
-
+pinMode(ENA, OUTPUT);
 
 pinMode(IN1, OUTPUT);
 pinMode(IN2, OUTPUT);
-Motor_Drive(1);
 
-//configurePWM(4, 90);
+
+digitalWrite(IN1, HIGH);
+digitalWrite(IN2, HIGH);
+
+
 
 
 ledcSetup(0, 10, 8);
-ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
-
+ledcAttachPin(ENA, 0);  // Привязка пина к каналу ШИМ
 ledcWrite(0, 0);
-//ledcDetachPin(IN1);
+
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, HIGH);
 
 P = 0.0;
 I = 0.0;
@@ -99,15 +103,50 @@ Curr_1 = ReadAndFilterUS();
 Serial.print(Curr_1);
 Serial.println();
 */
+
+///*
+
 PID_MOVE(700, 1, 0, 0, 600, 400);
 Serial.println("---");
+
 delay(5000);
-PID_MOVE(2000, 1, 0, 0, 600, 400);
+
+
+PID_MOVE(300, 1, 0, 0, 600, 400);
 Serial.println("---");
+
 delay(5000);
-PID_MOVE(200, 1, 0, 0, 600, 400);
+
+
+PID_MOVE(500, 1, 0, 0, 600, 400);
 Serial.println("---");
+
 delay(5000);
+
+//*/
+
+/* Проверка работы ШИМ-а вручную
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, LOW);
+ledcWrite(0, map(90, 0, 100, 255, 0));
+Serial.println("Назад");
+delay(5000);
+
+
+
+//ledcWrite(0, map(25, 0, 100, 0, 255));
+digitalWrite(IN2, LOW);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, 25);
+Serial.println("Вперёд");
+delay(5000);
+
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, 0);
+Serial.println("Стоп");
+delay(5000);
+*/
 
 }
 
@@ -235,14 +274,16 @@ Serial.println(PID);
 
 if (PID < 0)
 {
-Motor_Drive(2);
+//Motor_Drive(2);
+total_direction = 2;
 PID = map(PID, 0, -2500, 0, 100);
 
 PID = constrain(PID, 0, 100);
 }
 else if (PID > 0)
 {
-Motor_Drive(1);
+//Motor_Drive(1);
+total_direction = 1;
 PID = map(PID, 0, 2500, 0, 100);
 
 PID = constrain(PID, 0, 100);
@@ -250,8 +291,7 @@ PID = constrain(PID, 0, 100);
 }
 else
 {
-Motor_Drive(3);
-//Serial.println(PID);
+total_direction = 3;
 } 
 
 //PID = map(PID, -1000, 2000, -100, 100);
@@ -260,39 +300,55 @@ Motor_Drive(3);
 Serial.print(" 2 PID value - ");
 Serial.println(PID);
 
-configurePWM(10, PID);
+configurePWM(PID);
 
 }
 
 
-void configurePWM(int frequency, int dutyCycle)
+void configurePWM(int dutyCycle)
 {
 
-ledcDetachPin(IN1);
-ledcAttachPin(IN1, 0);  // Привязка пина к каналу ШИМ
-ledcSetup(0, frequency, 8);
+
+
+
+switch (total_direction)
+{
+case 1:
+
+//Motor_Drive(1);
+
+
+digitalWrite(IN2, LOW);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
+
+break;
+
+case 2:
+//Motor_Drive(2);
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, LOW);
+ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));//реверснул
+
+
+  break;
+case 3:
+
+digitalWrite(IN2, HIGH);
+digitalWrite(IN1, HIGH);
+ledcWrite(0, 0);
+
+break;
+}
+
 Serial.print("DC -");
 Serial.println(dutyCycle);
 Serial.print("dir -");
 Serial.println(total_direction);
 
-switch (total_direction)
-{
-case 1:
-ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
-  break;
-
-case 2:
-ledcWrite(0, map(dutyCycle, 0, 100, 255, 0));
-  break;
-case 3:
-//ledcDetachPin(IN1);
-break;
-}
-  
 }
 
-
+/*
 void Motor_Drive(int direction)
 {
 total_direction = direction;
@@ -300,14 +356,16 @@ total_direction = direction;
  switch (direction)
  {
  case 1: //Если вперёд
-  digitalWrite(IN2, LOW);
-  //digitalWrite(IN1, HIGH);
+ //digitalWrite(IN1, LOW);
+digitalWrite(IN2, LOW);
+  
   //Настройка pwm
   break;
  
  case 2://Если назад
+ //digitalWrite(IN1, HIGH);
  digitalWrite(IN2, HIGH);
- //digitalWrite(IN1, LOW); 
+ 
  //Настройка pwm
   break;
 
@@ -317,3 +375,4 @@ digitalWrite(IN1, HIGH);
 digitalWrite(IN2, HIGH);
  }
 }
+*/
