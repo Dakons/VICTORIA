@@ -7,13 +7,12 @@ Adafruit_INA219 ina219_2(0x44);
 
 unsigned long sensTimer = 0;
 
-float Curr_1, Curr_2, Curr_3;
 float dist, dist_filtered, dist_filtered_1, dist_filtered_2; // Для фильтрации
 
 float k;       // Коэффициент для бегущего среднего
 byte i, delta; // счётчики
 
-// Adafruit_INA219 ina219_2;
+
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 
 float convertToMillimeters(float sensorValue);
@@ -22,8 +21,6 @@ void setup()
 {
   Wire.begin(21, 22);
   Serial.begin(115200);
-  // Serial.println("clean, median");
-  // ina219_1.setCalibration_32V_2A();
   ina219_1.setCalibration_16V_400mA();
   ina219_2.setCalibration_16V_400mA();
   if (!ina219_1.begin())
