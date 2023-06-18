@@ -23,7 +23,6 @@ float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
 void configurePWM(int dutyCycle);
 void serialPWM();
-float middle_of_3(float a, float b, float c);
 void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 
 
