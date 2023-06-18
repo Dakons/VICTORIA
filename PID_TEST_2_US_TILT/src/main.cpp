@@ -18,6 +18,7 @@ byte i, delta; // счётчики
 
 int total_direction; //направление
 float HIGH_VAL, LOW_VAL, Err_T, prevErr_T, P_T, I_T, D_T, PID_T; //Для пида
+float dist_1, dist_2;
 
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
@@ -93,6 +94,7 @@ CRIT_CHECK();
 PID_TILT();
 PID_TILT();
 */
+/*
 PID_TILT(1200, 400, 1, 0, 0, 100, -100);
 Serial.println("---");
 delay(5000);
@@ -108,7 +110,20 @@ delay(5000);
 PID_TILT(-2000, -1000, 1, 0, 0, 100, -100);
 Serial.println("---");
 delay(5000);
+*/
 
+  dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
+  delay(1);
+  dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
+  delay(1);
+
+  Serial.print(dist_1);
+  Serial.print(',');
+  Serial.print(dist_2);
+  Serial.println();
+  PID_TILT(dist_1, dist_2, 1, 0, 0, -200, 200);
+  Serial.println("---");
+  delay(1000);
 
 //Вывод инфы с датчиков тока
 /*
