@@ -15,22 +15,24 @@ Adafruit_INA219 ina219_2(0x44);
 
 unsigned long sensTimer = 0;
 float dist, dist_filtered, dist_filtered_1, dist_filtered_2; // Для фильтрации
-float dist_1, dist_2;
+
 float k;       // Коэффициент для бегущего среднего
 byte i, delta; // счётчики
 
 int total_direction;                                             // направление
-float Err_H, prevErr_H, P_H, I_H, D_H, PID_H; // Для пида
+float Err_T, prevErr_T, P_T, I_T, D_T, PID_T; // Для пида наклона
+float Err_H, prevErr_H, P_H, I_H, D_H, PID_H; // Для пида высоты
+float dist_1, dist_2;
 
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
 void configurePWM(int dutyCycle, byte Motor_NUM);
 void serialPWM();
+void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
-
 void setup()
 {
-    Serial.begin(115200);
+  Serial.begin(115200);
   ////Подключение датчиков тока
 
   Wire.begin(21, 22);
@@ -81,12 +83,11 @@ void setup()
   digitalWrite(IN3, HIGH);
   digitalWrite(IN4, HIGH);
 
-
   // обнуляем коэффициенты
-  P_H = 0.0;
-  I_H = 0.0;
-  D_H = 0.0;
-  PID_H = 0.0;
+  P_T = 0.0;
+  I_T = 0.0;
+  D_T = 0.0;
+  PID_T = 0.0;
 }
 
 void loop()
@@ -95,36 +96,25 @@ void loop()
 
   /*
   CRIT_CHECK();
-  PID_HEIGHT();
+  PID_TILT();
   PID_TILT();
   */
-  /*Проверка работы ПИД
-  PID_HEIGHT(600, 400, 1, 0, 0, 600, 400);
-  Serial.println("---");
-  delay(5000);
-
-  PID_HEIGHT(1000, 400, 1, 0, 0, 600, 400);
-  Serial.println("---");
-  delay(5000);
-
-  PID_HEIGHT(2000, 400, 1, 0, 0, 600, 400);
-  Serial.println("---");
-  delay(5000);
-
-  PID_HEIGHT(-2000, -1000, 1, 0, 0, 600, 400);
-  Serial.println("---");
-  delay(5000);
-  */
-
-  // Вывод инфы с датчиков тока
   /*
-    float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
-    float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
+  PID_TILT(1200, 400, 1, 0, 0, 100, -100);
+  Serial.println("---");
+  delay(5000);
 
-    Serial.print(dist_1);
-    Serial.print(',');
-    Serial.print(dist_2);
-    Serial.println();
+  PID_TILT(1000, 2346, 1, 0, 0, 100, -100);
+  Serial.println("---");
+  delay(5000);
+
+  PID_TILT(100, 120, 1, 0, 0, 100, -100);
+  Serial.println("---");
+  delay(5000);
+
+  PID_TILT(-2000, -1000, 1, 0, 0, 100, -100);
+  Serial.println("---");
+  delay(5000);
   */
 
   dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
@@ -136,23 +126,22 @@ void loop()
   Serial.print(',');
   Serial.print(dist_2);
   Serial.println();
+
+  PID_TILT(dist_1, dist_2, 1, 0, 0, 200, -200);
   PID_HEIGHT(dist_1, dist_2, 1, 0, 0, 700, 500);
   Serial.println("---");
   delay(1000);
 
-//Serial.println("---");
+  // Вывод инфы с датчиков тока
+  /*
+    float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
+    float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
 
-  //delay(2000);
-/* 
-  PID_HEIGHT(dist_1, dist_2, 1, 0, 0, 500, 300);
-  
- 
-  Serial.print(dist_1);
-  Serial.print(',');
-  Serial.print(dist_2);
-  Serial.println();
-
-*/
+    Serial.print(dist_1);
+    Serial.print(',');
+    Serial.print(dist_2);
+    Serial.println();
+  */
 }
 
 float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
@@ -162,16 +151,9 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
   {
   case 1:
     dist_filtered = dist_filtered_1;
-    //Serial.println();
-    //Serial.print("Case 1, dist_filtered = ");
-    //Serial.println(dist_filtered);
-    //delay(1000);
     break;
   case 2:
     dist_filtered = dist_filtered_2;
-    //Serial.print("Case 2, dist_filtered = ");
-    //Serial.println(dist_filtered);
-    //delay(1000);
     break;
   }
 
@@ -207,16 +189,9 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
   {
   case 1:
     dist_filtered_1 = dist_filtered;
-    //Serial.print("Case 1, dist_filtered_1 = ");
-    //Serial.println(dist_filtered_1);
-    //delay(1000);
-
     break;
   case 2:
     dist_filtered_2 = dist_filtered;
-    //Serial.print("Case 2, dist_filtered_2 = ");
-    //Serial.println(dist_filtered_2);
-    //delay(1000);
     break;
   default:
 
@@ -256,6 +231,70 @@ float convertToMillimeters(float sensorValue)
   return millimeters;
 }
 
+void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL)
+
+{
+
+  Err_T = VAL_LEFT - VAL_RIGHT;
+
+  if (Err_T > HIGH_VAL)
+  {
+    Err_T = Err_T - HIGH_VAL;
+  }
+  else if (Err_T < LOW_VAL)
+  {
+    Err_T = Err_T - LOW_VAL;
+  }
+  else
+  {
+    Err_T = 0;
+  }
+
+Serial.print("Err_T =");
+Serial.println(Err_T);
+  P_T = Err_T * Kp;
+  I_T = I_T + Err_T * Ki;
+  D_T = (Err_T - prevErr_T) * Kd;
+
+  if (I_T > 2000.0 || I_T < -2000.0)
+  {
+    I_T = 0;
+  }
+
+  PID_T = P_T + I_T + D_T;
+
+  //Serial.print(" 1 PID_T - ");
+  //Serial.println(PID_T);
+
+  if (PID_T < 0)
+  {
+    total_direction = 1;
+    PID_T = map(PID_T, 0, -2500, 0, 100);
+
+    PID_T = constrain(PID_T, 0, 100);
+  }
+  else if (PID_T > 0)
+  {
+    total_direction = 2;
+    PID_T = map(PID_T, 0, 2500, 0, 100);
+
+    PID_T = constrain(PID_T, 0, 100);
+  }
+  else
+  {
+    total_direction = 3;
+    // Serial.println(PID);
+  }
+
+  // PID = map(PID, -1000, 2000, -100, 100);
+  // PID = map(PID, -100, 100, 0, 100);
+
+  //Serial.print(" 2 PID_T - ");
+  //Serial.println(PID_T);
+
+  configurePWM(PID_T, 2);
+}
+
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL)
 
 {
@@ -276,6 +315,10 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
     Err_H = 0;
   }
 
+
+Serial.print("Err_H =");
+Serial.println(Err_H);
+
   P_H = Err_H * Kp;
   I_H = I_H + Err_H * Ki;
   D_H = (Err_H - prevErr_H) * Kd;
@@ -287,8 +330,8 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
 
   PID_H = P_H + I_H + D_H;
 
-  Serial.print(" 1 PID_H - ");
-  Serial.println(PID_H);
+  //Serial.println(PID_H);
+  //Serial.print(" 1 PID_H - ");
 
   if (PID_H < 0)
   {
@@ -313,10 +356,10 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
   // PID = map(PID, -1000, 2000, -100, 100);
   // PID = map(PID, -100, 100, 0, 100);
 
-  Serial.print(" 2 PID_H - ");
-  Serial.println(PID_H);
+  //Serial.print(" 2 PID_H - ");
+  //Serial.println(PID_H);
 
-  configurePWM(PID_H, 2);
+  configurePWM(PID_H, 1);
 }
 
 void configurePWM(int dutyCycle, byte Motor_NUM)
