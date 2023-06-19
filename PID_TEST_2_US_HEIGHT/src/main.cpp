@@ -4,7 +4,11 @@
 
 #define IN1 2
 #define IN2 15
-#define ENA 5
+#define ENA 4
+
+#define IN3 5
+#define IN4 18
+#define ENB 19
 
 Adafruit_INA219 ina219_1(0x40);
 Adafruit_INA219 ina219_2(0x44);
@@ -20,55 +24,63 @@ float HIGH_VAL, LOW_VAL, Err_H, prevErr_H, P_H, I_H, D_H, PID_H; // Для пи�
 
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
-void configurePWM(int dutyCycle);
+void configurePWM(int dutyCycle, byte Motor_NUM);
 void serialPWM();
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 
 void setup()
 {
-  Serial.begin(115200);
+    Serial.begin(115200);
   ////Подключение датчиков тока
-  
-    Wire.begin(21, 22);
-    //Serial.begin(115200);
-    ina219_1.setCalibration_16V_400mA();
-    ina219_2.setCalibration_16V_400mA();
-    if (!ina219_1.begin())
+
+  Wire.begin(21, 22);
+  // Serial.begin(115200);
+  ina219_1.setCalibration_16V_400mA();
+  ina219_2.setCalibration_16V_400mA();
+  if (!ina219_1.begin())
+  {
+    Serial.println("Failed to find INA219_1 chip");
+    while (1)
     {
-      Serial.println("Failed to find INA219_1 chip");
-      while (1)
-      {
-        delay(10);
-      }
+      delay(10);
     }
-    if (!ina219_2.begin())
+  }
+  if (!ina219_2.begin())
+  {
+    Serial.println("Failed to find INA219_2 chip");
+    while (1)
     {
-      Serial.println("Failed to find INA219_2 chip");
-      while (1)
-      {
-        delay(10);
-      }
+      delay(10);
     }
-    Serial.println("US_1, US_2");
-  
+  }
+  Serial.println("US_1, US_2");
+
   //////////
 
   // Настраиваем пины для драйвера
   pinMode(ENA, OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  // pinMode(IN3, OUTPUT);
-  // pinMode(IN4, OUTPUT);
-  // pinMode(ENB, OUTPUT);
+
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
 
   // настраиваем шим
   ledcSetup(0, 10, 8);
   ledcAttachPin(ENA, 0); // Привязка пина к каналу ШИМ
   ledcWrite(0, 0);
 
+  ledcSetup(1, 10, 8);
+  ledcAttachPin(ENB, 1); // Привязка пина к каналу ШИМ
+  ledcWrite(1, 0);
+
   // Ставим в тормоз
   digitalWrite(IN2, HIGH);
   digitalWrite(IN1, HIGH);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, HIGH);
+
 
   // обнуляем коэффициенты
   P_H = 0.0;
@@ -304,18 +316,17 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
   Serial.print(" 2 PID_H - ");
   Serial.println(PID_H);
 
-  configurePWM(PID_H);
+  configurePWM(PID_H, 2);
 }
 
-void configurePWM(int dutyCycle)
+void configurePWM(int dutyCycle, byte Motor_NUM)
 {
-
+if (Motor_NUM == 1)
+{
   switch (total_direction)
   {
   case 1:
-
     // Motor_Drive(1);
-
     digitalWrite(IN2, LOW);
     digitalWrite(IN1, HIGH);
     ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
@@ -326,18 +337,49 @@ void configurePWM(int dutyCycle)
     // Motor_Drive(2);
     digitalWrite(IN2, HIGH);
     digitalWrite(IN1, LOW);
-    ledcWrite(0, map(dutyCycle, 0, 100, 0, 255)); // реверснул
+    ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
 
     break;
   case 3:
-
     digitalWrite(IN2, HIGH);
     digitalWrite(IN1, HIGH);
     ledcWrite(0, 0);
 
     break;
   }
+}
+else if (Motor_NUM == 2)
+{
+  switch (total_direction)
+  {
+  case 1:
+    // Motor_Drive(1);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, HIGH);
+    ledcWrite(1, map(dutyCycle, 0, 100, 0, 255));
 
+    break;
+
+  case 2:
+    // Motor_Drive(2);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
+    ledcWrite(1, map(dutyCycle, 0, 100, 0, 255));
+
+    break;
+  case 3:
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, HIGH);
+    ledcWrite(1, 0);
+
+    break;
+  }
+}
+
+
+
+  Serial.print("Motor_NUM -");
+  Serial.println(Motor_NUM);
   Serial.print("DC -");
   Serial.println(dutyCycle);
   Serial.print("dir -");
