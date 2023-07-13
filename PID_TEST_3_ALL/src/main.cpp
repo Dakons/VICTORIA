@@ -15,6 +15,8 @@
 Adafruit_INA219 ina219_1(0x40);
 Adafruit_INA219 ina219_2(0x44);
 
+unsigned long TimeMoment_1, TimeMoment_2, TimeMoment_3, TimeMoment_4;
+
 unsigned long sensTimer = 0;
 float dist, dist_filtered, dist_filtered_1, dist_filtered_2; // Для фильтрации
 
@@ -171,6 +173,8 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 void TOTAL_CHECK();
 
+unsigned int counter = 0;
+
 bool TOTAL_FLAG_MOTOR1 = 0;
 
 bool TOTAL_FLAG_MOTOR2 = 0;
@@ -184,16 +188,13 @@ void setup()
   // configurePulse(10, 50, ENA, 10, 50, ENB);
   // timerAlarmEnable(timer1); // Включаем таймер 1 !!!!!!!11
 
-
-  
-
   // timerAlarmEnable(timer2); // Включаем таймер 2
   // timerAlarmWrite(timer1, 1000 * 1000, true); // Запускаем таймер для импульса HIGH пина 1
   // timerAlarmWrite(timer1, 100 * 1000, true);
   // timerAttachInterrupt(timer1, pulseISR1, true); // Привязываем прерывание к таймеру 1
 
   ////Подключение датчиков тока
-  /*
+  ///*
   Wire.begin(21, 22);
   // Serial.begin(115200);
   ina219_1.setCalibration_16V_400mA();
@@ -215,7 +216,7 @@ void setup()
     }
   }
   Serial.println("US_1, US_2");
-  */
+  //*/
   //////////
 
   // Настраиваем пины для драйвера
@@ -228,7 +229,7 @@ void setup()
   pinMode(ENB, OUTPUT);
 
   pinMode(ENC, OUTPUT);
-  
+
   // настраиваем шим
   /*
     ledcSetup(0, 1000, 8);
@@ -255,9 +256,7 @@ void setup()
   // PID_TILT(1000, 500, 1, 0, 0, 200, -200);
   // PID_HEIGHT(2500, 500, 1, 0, 0, 700, 500);
 
-
-
-pulseHighDuration1 = 50;
+  pulseHighDuration1 = 50;
   pulseLowDuration1 = 50;
   pulseHighDuration2 = 50;
   pulseLowDuration2 = 50;
@@ -267,17 +266,12 @@ pulseHighDuration1 = 50;
   timerAttachInterrupt(timer1, pulseISR1, true);
   timerAlarmEnable(timer1);
   configurePulsee(50, 100, 1, 0);
- 
-
 
   timer2 = timerBegin(1, 80, true);
   timerAlarmWrite(timer2, 1000 * 1000, true); // Запускаем таймер для импульса HIGH пина 1
   timerAttachInterrupt(timer2, pulseISR2, true);
   timerAlarmEnable(timer2);
   configurePulsee(50, 100, 2, 0);
-
-
-
 }
 
 void loop()
@@ -297,39 +291,69 @@ void loop()
   delay(3000);
 */
   //  Вывод инфы с датчиков тока
-  /*
-    float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
-    delay(1);
-    float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
-delay(1);
-
-    Serial.print(dist_1);
-    Serial.print(',');
-    Serial.print(dist_2);
-    Serial.println();
-  */
-  // Подача на пид
   ///*
-   PID_HEIGHT(500, 500, 1, 0, 0, 700, 500);
-  PID_TILT(1000, 100, 1, 0, 0, 200, -200);
-delay(2000);
+  TimeMoment_1 = micros();
+  float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
+  delay(1);
+  float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
+  delay(1);
+  /*
+    Serial.print(dist_1);
+      Serial.print(',');
+      Serial.print(dist_2);
+      Serial.println();
+  */
+ TimeMoment_2 = micros();
+  PID_TILT(dist_1, dist_2, 0.25, -0.01, 1.75, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
+  TimeMoment_3 = micros();
+  PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
+TimeMoment_4 = micros();
 
-   PID_HEIGHT(-500, 500, 1, 0, 0, 700, 500);
+Serial.println("_____");
+Serial.print("TimeMoment_1: ");
+Serial.println(TimeMoment_1);
+
+Serial.print("TimeMoment_2: ");
+Serial.println(TimeMoment_2);
+
+Serial.print("TimeMoment_3: ");
+Serial.println(TimeMoment_3);
+
+Serial.print("TimeMoment_4: ");
+Serial.println(TimeMoment_4);
+
+delay(5000);
+  /*
+      Serial.print(dist_1);
+      Serial.print(',');
+      Serial.print(dist_2);
+      Serial.println();
+
+      */
+  //*/
+  // Подача на пид
+
+  // PID_HEIGHT(-2000, 500, 1, 0, 0, 700, 500);
+  // configurePulsee(300, 300, 2, 1);
+  // PID_TILT(1000, 100, 1, 0, 0, 200, -200);
+  // delay(2000);
+  /*
+     PID_HEIGHT(-500, 500, 1, 0, 0, 700, 500);
   PID_TILT(1000, 1000, 1, 0, 0, 200, -200);
-delay(2000);
+  delay(2000);
 
-   PID_HEIGHT(1500, 500, 1, 0, 0, 700, 500);
-  PID_TILT(-1000, 1000, 1, 0, 0, 200, -200);
+     PID_HEIGHT(1500, 500, 1, 0, 0, 700, 500);
+    PID_TILT(-1000, 1000, 1, 0, 0, 200, -200);
 
-delay(2000);
+  delay(2000);
 
-   PID_HEIGHT(500, 500, 1, 0, 0, 700, 500);
-  PID_TILT(1000, 1000, 1, 0, 0, 200, -200);
+     PID_HEIGHT(500, 500, 1, 0, 0, 700, 500);
+    PID_TILT(1000, 1000, 1, 0, 0, 200, -200);
 
-  delay(5000);
- 
+    delay(5000);
 
- // */
+
+    */
 }
 
 float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
@@ -431,28 +455,62 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
   }
   else if (Err_T < LOW_VAL)
   {
-    Err_T = Err_T - LOW_VAL;
+    Err_T = Err_T - LOW_VAL; //!!!
   }
   else
   {
     Err_T = 0;
   }
+  
+// адаптация
+  if (Err_T > 1000)
+  {
+    Kp = 2;
+  }
 
-  Serial.print("Err_T =");
-  Serial.println(Err_T);
+  // Serial.print("Err_T =");
+  // Serial.println(Err_T);
   P_T = Err_T * Kp;
   I_T = I_T + Err_T * Ki;
   D_T = (Err_T - prevErr_T) * Kd;
 
-  if (I_T > 2000.0 || I_T < -2000.0)
+  I_T = constrain(I_T, -1000.0, 1000.0);
+  // counter++;
+  if (I_T >= 999.0 || I_T <= -999.0)
+  {
+
+    I_T *= 0.1;
+  }
+
+  if (I_T <= 200.0 && I_T >= -200.0)
+  {
+    counter++;
+  }
+  else
+    counter = 0;
+
+  if (counter >= 50)
   {
     I_T = 0;
+    counter = 0;
   }
+  /*
+   if (counter >= 50)
+      {
+        if (I_T <= 200.0 || I_T >= -200.0)
+        {
+          I_T = 0;
+          counter = 0;
+        }
+      }
+  */
+
+  // if (I_T < 150.0 || I_T > -150.0) I_T = 0;
 
   PID_T = P_T + I_T + D_T;
 
   // Serial.print(" 1 PID_T - ");
-  // Serial.println(PID_T);
+  // Serial.println(I_T);
 
   if (PID_T < 0)
   {
@@ -474,19 +532,27 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
     // Serial.println(PID);
   }
 
-  // PID = map(PID, -1000, 2000, -100, 100);
-  // PID = map(PID, -100, 100, 0, 100);
 
-  // Serial.print(" 2 PID_T - ");
-  // Serial.println(PID_T);
+  if (total_direction == 1)
+  {
+    configurePWM(PID_T, 1, 37);
+  }
 
-  configurePWM(PID_T, 1, 50);
+  if (total_direction == 2)
+  {
+    configurePWM(PID_T, 1, 50);
+  }
+
+  if (total_direction == 3)
+  {
+    configurePWM(PID_T, 1, 50);
+  }
+
+
 }
 
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL)
-
 {
-
   Err_H = VAL_LEFT + VAL_RIGHT;
   Err_H /= 2;
 
@@ -503,14 +569,14 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
     Err_H = 0;
   }
 
-  Serial.print("Err_H =");
-  Serial.println(Err_H);
+  // Serial.print("Err_H =");
+  // Serial.println(Err_H);
 
   P_H = Err_H * Kp;
   I_H = I_H + Err_H * Ki;
   D_H = (Err_H - prevErr_H) * Kd;
 
-  if (I_H > 2000.0 || I_H < -2000.0)
+  if (I_H > 1000.0 || I_H < -1000.0)
   {
     I_H = 0;
   }
@@ -529,7 +595,7 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
   }
   else if (PID_H > 0)
   {
-    total_direction = 2;
+    total_direction = 2; // вниз
     PID_H = map(PID_H, 0, 2500, 0, 100);
 
     PID_H = constrain(PID_H, 0, 100);
@@ -546,7 +612,12 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
   // Serial.print(" 2 PID_H - ");
   // Serial.println(PID_H);
 
-  configurePWM(PID_H, 2, 50);
+  if (total_direction == 2)
+  {
+    PID_H *= 1;
+  }
+
+  configurePWM(PID_H, 2, 300);
 }
 
 void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse)
@@ -560,7 +631,7 @@ void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse)
       digitalWrite(IN2, LOW);
       digitalWrite(IN1, HIGH);
       // ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
-      configurePulsee(high_impulse, map(dutyCycle, 0, 100, 1000, 50), 1, 1);
+      configurePulsee(high_impulse, map(dutyCycle, 0, 100, 1000, 100), 1, 1);
 
       break;
 
@@ -569,7 +640,7 @@ void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse)
       digitalWrite(IN2, HIGH);
       digitalWrite(IN1, LOW);
       // ledcWrite(0, map(dutyCycle, 0, 100, 0, 255));
-      configurePulsee(high_impulse, map(dutyCycle, 0, 100, 1000, 50), 1, 1);
+      configurePulsee(high_impulse, map(dutyCycle, 0, 100, 1000, 100), 1, 1);
 
       break;
     case 3:
@@ -608,14 +679,18 @@ void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse)
 
       break;
     }
+    // Serial.print("DC: ");
+    // Serial.println(dutyCycle);
   }
+  /*
+    Serial.print("Motor_NUM -");
+    Serial.println(Motor_NUM);
+    Serial.print("DC -");
+    Serial.println(dutyCycle);
+    Serial.print("dir -");
+    Serial.println(total_direction);
 
-  Serial.print("Motor_NUM -");
-  Serial.println(Motor_NUM);
-  Serial.print("DC -");
-  Serial.println(dutyCycle);
-  Serial.print("dir -");
-  Serial.println(total_direction);
+    */
 }
 /*
 void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num, byte TOTAL_MODE)
@@ -760,8 +835,8 @@ void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num,
       digitalWrite(ENA, LOW);
       Serial.println("STOP_INTERRUPTS MOTOR 1");
     }
-    //TOTAL_FLAG_MOTOR1 = 1;
-    //TOTAL_CHECK();
+    // TOTAL_FLAG_MOTOR1 = 1;
+    // TOTAL_CHECK();
     CheckFlag();
     return;
   }
@@ -775,8 +850,8 @@ void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num,
       digitalWrite(ENB, LOW);
       Serial.println("STOP_INTERRUPTS MOTOR 2");
     }
-    //TOTAL_FLAG_MOTOR2 = 1;
-    //TOTAL_CHECK();
+    // TOTAL_FLAG_MOTOR2 = 1;
+    // TOTAL_CHECK();
     CheckFlag();
     return;
   }
@@ -799,7 +874,7 @@ void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num,
       NEWpulseHighDuration1 = highTime;
       NEWpulseLowDuration1 = lowTime;
     }
-//TOTAL_FLAG_MOTOR1 = 0;
+    // TOTAL_FLAG_MOTOR1 = 0;
     break;
 
   case 2:
@@ -818,21 +893,23 @@ void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num,
       NEWpulseHighDuration2 = highTime;
       NEWpulseLowDuration2 = lowTime;
     }
-    //TOTAL_FLAG_MOTOR2 = 0;
+    // TOTAL_FLAG_MOTOR2 = 0;
     break;
   }
 
- //CheckFlag();
+  // CheckFlag();
+  /*
+    Serial.print("lowTime - ");
+    Serial.println(lowTime);
 
-  Serial.print("lowTime - ");
-  Serial.println(lowTime);
+    */
 }
 //*/
 
 void TOTAL_CHECK()
 {
- if(TOTAL_FLAG_MOTOR1 && TOTAL_FLAG_MOTOR2)
- {
-  digitalWrite(ENC, LOW);
- }
+  if (TOTAL_FLAG_MOTOR1 && TOTAL_FLAG_MOTOR2)
+  {
+    digitalWrite(ENC, LOW);
+  }
 }
