@@ -249,14 +249,14 @@ void loop()
   //Serial.println(X_val);
   //int Y_val = analogRead(pinY);
 HAND_MOVE();
-delay(10);
+delay(5);
 
 }
 
 void HAND_MOVE() // Ручное управление. Приём данных с джойстика
 {
   int X_val = analogRead(pinX);
-  int Y_val = analogRead(pinY);
+  int Y_val = 0;//analogRead(pinY);
 
   if (X_val < 0) X_val = 1930;
   if (Y_val < 0) Y_val = 1930;
@@ -264,14 +264,14 @@ void HAND_MOVE() // Ручное управление. Приём данных �
  if (X_val < 2000 && X_val > 1900)
   {
     total_direction = 3;
-    configurePWM(0, 1, 50);
+    configurePWM(0, 1, 37);
     //Y_val = -100;
   }
   else if (X_val <= 1900)
   {
     total_direction = 1;
     X_val = map(X_val, 0, 1900, 100, 0);
-    configurePWM(X_val, 1, 37);
+    configurePWM(X_val, 1, 50);
   }
   else if (X_val >= 2000)
   {
@@ -282,32 +282,34 @@ void HAND_MOVE() // Ручное управление. Приём данных �
 
 
 
-
+/*
   if (Y_val < 2000 && Y_val > 1900)
   {
     total_direction = 3;
-    configurePWM(0, 2, 300);
+    //configurePWM(0, 2, 300);
     //Y_val = -100;
   }
   else if (Y_val <= 1900)
   {
     total_direction = 1;
     Y_val = map(Y_val, 0, 1900, 100, 0);
-    configurePWM(Y_val, 2, 300);
+    //configurePWM(Y_val, 2, 300);
   }
   else if (Y_val >= 2000)
   {
     total_direction = 2;
     Y_val = map(Y_val, 2000, 4095, 0, 100);
-    configurePWM(Y_val, 2, 300);
+    //configurePWM(Y_val, 2, 300);
   }
-
+  */
+/*
 Serial.println();
 Serial.print ("X: ");
 Serial.print (X_val);
 Serial.print(" ");
 Serial.print("Y: ");
 Serial.println(Y_val);
+*/
 
 }
 
