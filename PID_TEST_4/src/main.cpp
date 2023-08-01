@@ -156,7 +156,7 @@ void setup()
   // timerAttachInterrupt(timer1, pulseISR1, true); // Привязываем прерывание к таймеру 1
 
   ////Подключение датчиков тока
-  /*
+  ///*
   Wire.begin(21, 22);
   // Serial.begin(115200);
   ina219_1.setCalibration_16V_400mA();
@@ -178,7 +178,7 @@ void setup()
     }
   }
   //Serial.println("US_1, US_2");
-  */
+  //*/
   //////////
 
   // Настраиваем пины для драйвера
@@ -243,11 +243,29 @@ void loop()
 {
  j+=0.01;
 
+
   Serial.print("loop");
   Serial.println(j);
 
-  Serial.print(">sin:");
-  Serial.println(sin(j));
+float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1));
+  delay(1);
+float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
+  delay(1);
+
+
+  Serial.print(">dist_1:");
+  Serial.println(dist_1);
+
+  Serial.print(">dist_2:");
+  Serial.println(dist_2);
+
+Serial.print(">Current_1:");
+  Serial.println(ina219_1.getCurrent_mA());
+
+Serial.print(">Current_2:");
+  Serial.println(ina219_2.getCurrent_mA());
+
+
 
   //Serial.print(">cos:");
   //Serial.println(cos(j));
@@ -281,22 +299,35 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
     // dist = ina219_1.getCurrent_mA();
     delta = abs(dist_filtered - dist); // расчёт изменения с предыдущим
 
-    if (delta > 1) // если большое - резкий коэффициент
+    if (delta > 250) // если большое - резкий коэффициент
     {
       k =0.95; 
     }
-    else if (delta <= 1 && delta > 0.3)
+    else if (delta <= 250 && delta > 75)
     {
       k = 0.8;
     }
-    else if (delta <= 0.3 && delta >= 0.1)
+    else if (delta <= 75 && delta > 25)
+    {
+      k = 0.4;//0.1;
+    }
+    else if (delta <= 25 && delta > 10) 
+    {
+      k = 0.2;
+    }
+        else if (delta <= 10 && delta > 5) 
     {
       k = 0.1;
     }
-    else if (delta <= 0.1)
+    else if (delta <= 5 && delta > 2)
     {
       k = 0.05;
     }
+    else if (delta <= 2 && delta > 0)
+    {
+      k = 0.025;
+    }
+
     // если маленькое - плавный коэффициент
 
     dist_filtered += (dist - dist_filtered) * k; // фильтр "бегущее среднее"
@@ -316,37 +347,39 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
 
     break;
   }
-  return dist_filtered + 0.35; //+0.43
+  return dist_filtered; //+0.43
 }
 
 float convertToMillimeters(float sensorValue)
 {
-  if (sensorValue < 3.7)
+  if (sensorValue < 380.0)
   {
     return 0.0;
   }
-  else if (sensorValue >= 3.7 && sensorValue < 4.0)
+  else if (sensorValue >= 380.0 && sensorValue < 4.0)
   {
     sensorValue = 4.0;
   }
 
-  if (sensorValue > 22.0)
+  if (sensorValue > 2200.0)
   {
     return 1.0;
   }
-  else if (sensorValue >= 20.0 && sensorValue <= 22.0)
+  else if (sensorValue >= 1900.0 && sensorValue <= 2200.0)
   {
-    sensorValue = 20.0;
+    sensorValue = 1900.0;
   }
 
-  float minSensorValue = 4.0;    // Минимальное значение с токового датчика (в мА)
+  float minSensorValue = 400.0;    // Минимальное значение с токового датчика (в мА)
   float minMillimeters = 100.0;  // Минимальное значение в миллиметрах
-  float maxSensorValue = 20.0;   // Максимальное значение с токового датчика (в мА)
+  float maxSensorValue = 2000.0;   // Максимальное значение с токового датчика (в мА)
   float maxMillimeters = 2000.0; // Максимальное значение в миллиметрах
 
   // Выполняем линейную интерполяцию
   float millimeters = ((sensorValue - minSensorValue) / (maxSensorValue - minSensorValue)) * (maxMillimeters - minMillimeters) + minMillimeters;
 
+  millimeters = ceil(millimeters);
+  
   return millimeters;
 }
 
