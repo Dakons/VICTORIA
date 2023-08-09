@@ -252,7 +252,7 @@ float dist_1 = convertToMillimeters(ReadAndFilterUS(ina219_1.getCurrent_mA(), 1)
 float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
   delay(1);
 
-
+/*
   Serial.print(">dist_1:");
   Serial.println(dist_1);
 
@@ -264,8 +264,10 @@ Serial.print(">Current_1:");
 
 Serial.print(">Current_2:");
   Serial.println(ina219_2.getCurrent_mA());
+*/
+//PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
 
-
+PID_TILT(dist_1, dist_2, 1, 0, 0, 1, 100, -100);
 
   //Serial.print(">cos:");
   //Serial.println(cos(j));
@@ -389,9 +391,11 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 
   Err_T = VAL_LEFT - VAL_RIGHT;
 
+/*
   if (Err_T > HIGH_VAL)
   {
     Err_T = Err_T - HIGH_VAL;
+
   }
   else if (Err_T < LOW_VAL)
   {
@@ -401,6 +405,7 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
   {
     Err_T = 0;
   }
+  */
   //Serial.print(Err_T);
   //Serial.print(",");
 // адаптация
@@ -408,7 +413,13 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
   // Serial.print("Err_T =");
   // Serial.println(Err_T);
 
-  Speed_T = (Err_T-prevErr_T)-(Err_T*Ks);
+  Serial.print(">Err_T:");
+  Serial.println(Err_T);
+
+  Speed_T = -(Err_T-prevErr_T)*(Err_T*Ks);
+
+  Serial.print(">Speed_T:");
+  Serial.println(Speed_T);
 
   P_T = Speed_T * Kp;
   I_T = I_T + Speed_T * Ki;
@@ -416,6 +427,19 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 prevSpeed_T = Speed_T;
 prevErr_T = Err_T;
   I_T = constrain(I_T, -1000.0, 1000.0);
+
+
+  Serial.print(">P_T:");
+  Serial.println(P_T);
+
+  Serial.print(">I_T:");
+  Serial.println(I_T);
+
+   Serial.print(">D_T:");
+Serial.println(D_T);
+
+ Serial.print(">PID_T:");
+  Serial.println(PID_T);
 
   if (I_T >= 999.0 || I_T <= -999.0)
   {

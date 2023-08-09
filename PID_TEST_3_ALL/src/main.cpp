@@ -27,6 +27,7 @@ int total_direction;                          // направление
 float Err_T, prevErr_T, P_T, I_T, D_T, PID_T, U_T, SPEED_LAST, SPEED_NOW; // Для пида наклона
 float Err_H, prevErr_H, P_H, I_H, D_H, PID_H; // Для пида высоты
 float dist_1, dist_2;
+float Err_D, prevErr_D;
 /////// прерывания
 
 volatile bool FLAG_WORK_1 = 0;
@@ -298,6 +299,19 @@ void loop()
   float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
   delay(1);
 
+/*
+  Serial.print(">dist_1:");
+  Serial.println(dist_1);
+
+  Serial.print(">dist_2:");
+  Serial.println(dist_2);
+
+Serial.print(">Current_1:");
+  Serial.println(ina219_1.getCurrent_mA());
+
+Serial.print(">Current_2:");
+  Serial.println(ina219_2.getCurrent_mA());
+/*
   /*
     Serial.print(dist_1);
       Serial.print(',');
@@ -305,9 +319,11 @@ void loop()
       Serial.println();
   */
 // TimeMoment_2 = micros();
-  PID_TILT(dist_1, dist_2, 0.1, 0, 1.75, -150, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
+  PID_TILT(dist_1, dist_2, 0.1, 0, 400, 0, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
  // TimeMoment_3 = micros();
-  PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
+  //PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
+
+  PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 2000, 1800);
 //TimeMoment_4 = micros();
 /*
 Serial.println("_____");
@@ -382,22 +398,35 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
     // dist = ina219_1.getCurrent_mA();
     delta = abs(dist_filtered - dist); // расчёт изменения с предыдущим
 
-    if (delta > 1) // если большое - резкий коэффициент
+    if (delta > 250) // если большое - резкий коэффициент
     {
       k =0.95; 
     }
-    else if (delta <= 1 && delta > 0.3)
+    else if (delta <= 250 && delta > 75)
     {
       k = 0.8;
     }
-    else if (delta <= 0.3 && delta >= 0.1)
+    else if (delta <= 75 && delta > 25)
+    {
+      k = 0.4;//0.1;
+    }
+    else if (delta <= 25 && delta > 10) 
+    {
+      k = 0.2;
+    }
+        else if (delta <= 10 && delta > 5) 
     {
       k = 0.1;
     }
-    else if (delta <= 0.1)
+    else if (delta <= 5 && delta > 2)
     {
       k = 0.05;
     }
+    else if (delta <= 2 && delta > 0)
+    {
+      k = 0.025;
+    }
+
     // если маленькое - плавный коэффициент
 
     dist_filtered += (dist - dist_filtered) * k; // фильтр "бегущее среднее"
@@ -417,37 +446,39 @@ float ReadAndFilterUS(float dist, byte ina219_NUM) // ina219_1.getCurrent_mA();
 
     break;
   }
-  return dist_filtered + 0.35; //+0.43
+  return dist_filtered; //+0.43
 }
 
 float convertToMillimeters(float sensorValue)
 {
-  if (sensorValue < 3.7)
+  if (sensorValue < 380.0)
   {
     return 0.0;
   }
-  else if (sensorValue >= 3.7 && sensorValue < 4.0)
+  else if (sensorValue >= 380.0 && sensorValue < 4.0)
   {
     sensorValue = 4.0;
   }
 
-  if (sensorValue > 22.0)
+  if (sensorValue > 2200.0)
   {
     return 1.0;
   }
-  else if (sensorValue >= 20.0 && sensorValue <= 22.0)
+  else if (sensorValue >= 1900.0 && sensorValue <= 2200.0)
   {
-    sensorValue = 20.0;
+    sensorValue = 1900.0;
   }
 
-  float minSensorValue = 4.0;    // Минимальное значение с токового датчика (в мА)
+  float minSensorValue = 400.0;    // Минимальное значение с токового датчика (в мА)
   float minMillimeters = 100.0;  // Минимальное значение в миллиметрах
-  float maxSensorValue = 20.0;   // Максимальное значение с токового датчика (в мА)
+  float maxSensorValue = 2000.0;   // Максимальное значение с токового датчика (в мА)
   float maxMillimeters = 2000.0; // Максимальное значение в миллиметрах
 
   // Выполняем линейную интерполяцию
   float millimeters = ((sensorValue - minSensorValue) / (maxSensorValue - minSensorValue)) * (maxMillimeters - minMillimeters) + minMillimeters;
 
+  millimeters = ceil(millimeters);
+  
   return millimeters;
 }
 
@@ -456,7 +487,7 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 {
 
   Err_T = VAL_LEFT - VAL_RIGHT;
-
+Err_D = Err_T;
   if (Err_T > HIGH_VAL)
   {
     Err_T = Err_T - HIGH_VAL;
@@ -469,24 +500,28 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
   {
     Err_T = 0;
   }
-  Serial.print(Err_T);
-  Serial.print(",");
+
+  Serial.print(">Err_D:");
+  Serial.println(Err_D);
+  //Serial.print(Err_T);
+  //Serial.print(",");
 // адаптация
-  if (Err_T > 500)
+  if (Err_D < 250 || Err_D > -250)
   {
-   // Kp = 4;
+   Kp = 1.75;
+   Kd = 800;
   }
 
   // Serial.print("Err_T =");
   // Serial.println(Err_T);
   P_T = Err_T * Kp;
   I_T = I_T + Err_T * Ki;
-  D_T = (Err_T - prevErr_T) * Kd;
+  D_T = (Err_D - prevErr_D) * Kd;
   prevErr_T = Err_T;
- 
+  prevErr_D = Err_D;
   
 
-  I_T = constrain(I_T, -1000.0, 1000.0);
+  I_T = constrain(I_T, -100.0, 100.0);
   // counter++;
   if (I_T >= 999.0 || I_T <= -999.0)
   {
@@ -521,6 +556,17 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 
   PID_T = P_T + I_T + D_T;
 
+  Serial.print(">P_T:");
+  Serial.println(P_T);
+
+  Serial.print(">I_T:");
+  Serial.println(I_T);
+
+   Serial.print(">D_T:");
+Serial.println(D_T);
+
+ Serial.print(">PID_T:");
+  Serial.println(PID_T);
   // Serial.print(" 1 PID_T - ");
   // Serial.println(I_T);
 
@@ -935,4 +981,32 @@ void TOTAL_CHECK()
   {
     digitalWrite(ENC, LOW);
   }
+}
+
+float adapt_P(float X, float Lowest_Y, float Highest_Y)
+{
+float Y;
+X = abs(X);
+Y = 1/X;
+//Y = -5 * X + Highest_Y;
+
+if (Y < Lowest_Y) Y = Lowest_Y;
+if (Y > Highest_Y) Y = Highest_Y;
+
+return Y;
+}
+
+float adapt_D(float X, float Lowest_Y, float Highest_Y)
+{
+float Y;
+
+Y = 1/X;
+
+Y = abs(Y);
+
+if (Y < Lowest_Y) Y = Lowest_Y;
+if (Y > Highest_Y) Y = Highest_Y;
+
+return Y;
+
 }
