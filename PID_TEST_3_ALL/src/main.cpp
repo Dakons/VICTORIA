@@ -2,15 +2,15 @@
 #include <Wire.h>
 #include <Adafruit_INA219.h>
 
-#define IN1 2
-#define IN2 4
-#define ENA 15
+#define IN1 12
+#define IN2 14
+#define ENA 13
 
-#define IN3 5
-#define IN4 18
-#define ENB 19
+#define IN3 27
+#define IN4 26
+#define ENB 25
 
-#define ENC 23
+#define ENC 33
 
 Adafruit_INA219 ina219_1(0x40);
 Adafruit_INA219 ina219_2(0x44);
@@ -174,6 +174,10 @@ void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, flo
 void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float HIGH_VAL, float LOW_VAL);
 void TOTAL_CHECK();
 
+
+float adapt_P(float X, float Lowest_Y, float Highest_Y);
+float adapt_D(float X, float Lowest_Y, float Highest_Y);
+
 unsigned int counter = 0;
 
 bool TOTAL_FLAG_MOTOR1 = 0;
@@ -299,13 +303,19 @@ void loop()
   float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
   delay(1);
 
-/*
+
   Serial.print(">dist_1:");
   Serial.println(dist_1);
 
   Serial.print(">dist_2:");
   Serial.println(dist_2);
 
+   PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
+
+   PID_HEIGHT(5000, 5000, 40, 0, 0, 1200, 1000);
+
+   //PID_TILT(dist_1, dist_2, 0.5, 0, 1600, 0, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
+/*
 Serial.print(">Current_1:");
   Serial.println(ina219_1.getCurrent_mA());
 
@@ -319,11 +329,11 @@ Serial.print(">Current_2:");
       Serial.println();
   */
 // TimeMoment_2 = micros();
-  PID_TILT(dist_1, dist_2, 0.1, 0, 400, 0, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
+  
  // TimeMoment_3 = micros();
-  //PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
-
-  PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 2000, 1800);
+ 
+//PID_TILT(dist_1, dist_2, 0.1, 0, 400, 0, 100, -100); // 2.85 d 1 75 //2 P I -01   0.25, -0.01, 1.75, 100, -100
+  //PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1500, 1700);
 //TimeMoment_4 = micros();
 /*
 Serial.println("_____");
@@ -505,18 +515,24 @@ Err_D = Err_T;
   Serial.println(Err_D);
   //Serial.print(Err_T);
   //Serial.print(",");
+
+
 // адаптация
+/*
   if (Err_D < 250 || Err_D > -250)
   {
    Kp = 1.75;
    Kd = 800;
   }
+*/
+float Kp_adapt = adapt_P(Err_T, 2, 16); //adapt_P(Err_T, 5, 5); adapt_P(Err_T, 1.6, 16);
+float Kd_adapt = adapt_D(Err_D, 2000, 4000); // adapt_D(Err_D, 800, 2000);  adapt_D(Err_D, 4000, 4000);
 
   // Serial.print("Err_T =");
   // Serial.println(Err_T);
-  P_T = Err_T * Kp;
+  P_T = Err_T * Kp_adapt;
   I_T = I_T + Err_T * Ki;
-  D_T = (Err_D - prevErr_D) * Kd;
+  D_T = (Err_D - prevErr_D) * Kd_adapt;
   prevErr_T = Err_T;
   prevErr_D = Err_D;
   
@@ -682,7 +698,7 @@ void PID_HEIGHT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, f
 
   if (total_direction == 2)
   {
-    PID_H *= 1;
+    PID_H *= 0.75;
   }
 
   configurePWM(PID_H, 2, 100);
@@ -760,135 +776,6 @@ void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse)
 
     */
 }
-/*
-void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num, byte TOTAL_MODE)
-{
-  //Serial.println("Stage 1");
-  if (Motor_Num == 1 && TOTAL_MODE == 0)
-  {
-    timerDetachInterrupt(timer1);
-    timer1_flag = 1;
-    digitalWrite(ENA, LOW);
-
-    return;
-  }
-  else if (Motor_Num == 2 && TOTAL_MODE == 0)
-  {
-    timerDetachInterrupt(timer2);
-     timer2_flag = 1;
-     digitalWrite(ENB, LOW);
-    return;
-  }
-//Serial.println("Stage 2");
-  switch (Motor_Num)
-  {
-  case 1:
-    // Перенастройка таймера 1
-    //timerAttachInterrupt(timer1, pulseISR1, true);
-
-    if (timer1_flag == 0)
-    {
-      //Serial.println("Stage 3");
-    timerDetachInterrupt(timer1); // Отключаем прерывание от текущего таймера 1
-    }
-
-    timer1_flag = 0;
-    pulseHighDuration1 = highTime;
-    pulseLowDuration1 = lowTime;
-    timerAlarmWrite(timer1, pulseHighDuration1 * 1000, true); // Запускаем таймер для импульса HIGH пина 1
-    //pulseState1 = 0;
-    timerAttachInterrupt(timer1, pulseISR1, true);            // Привязываем прерывание к таймеру 1
-    break;
-
-  case 2:
-    // Перенастройка таймера 2
-    //timerAttachInterrupt(timer2, pulseISR2, true);
- if (timer2_flag == 0)
-    {
-    timerDetachInterrupt(timer2); // Отключаем прерывание от текущего таймера 1
-    }
-timer2_flag = 0;
-    pulseHighDuration2 = highTime;
-    pulseLowDuration2 = lowTime;
-    timerAlarmWrite(timer2, pulseHighDuration2 * 1000, true); // Запускаем таймер для импульса HIGH пина 2
-    //pulseState2 = 0;
-    timerAttachInterrupt(timer2, pulseISR2, true);            // Привязываем прерывание к таймеру 2
-    break;
-  }
-  Serial.print("lowTime - ");
-  Serial.println(lowTime);
-}
-*/
-
-/* //Работает
-void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num, byte TOTAL_MODE)
-{
-  // Serial.println("Stage 1");
-  if (Motor_Num == 1 && TOTAL_MODE == 0)
-  {
-    timerDetachInterrupt(timer1);
-    timer1_flag = 1;
-    digitalWrite(ENA, LOW);
-    Serial.println("TOTAL do");
-
-    return;
-  }
-
-  if (Motor_Num == 2 && TOTAL_MODE == 0)
-  {
-    timerDetachInterrupt(timer2);
-    timer2_flag = 1;
-    digitalWrite(ENB, LOW);
-    return;
-  }
-  // Serial.println("Stage 2");
-  switch (Motor_Num)
-  {
-  case 1:
-    // Перенастройка таймера 1
-    // timerAttachInterrupt(timer1, pulseISR1, true);
-
-    if (timer1_flag == 0)
-    {
-      // Serial.println("Stage 3");
-      Serial.println("ERROR 1_1");
-      Serial.println(timerStarted(timer1));
-      timerDetachInterrupt(timer1); // Отключаем прерывание от текущего таймера 1
-    }
-    Serial.println("ERROR_1_2");
-    timer1_flag = 0;
-    FLAG_WORK_1 = 1;
-    NEWpulseHighDuration1 = highTime;
-    NEWpulseLowDuration1 = lowTime;
-    timerAlarmWrite(timer1, pulseHighDuration1 * 1000, true); // Запускаем таймер для импульса HIGH пина 1
-    // pulseState1 = 0;
-    Serial.println("ERROR 1");
-    timerAttachInterrupt(timer1, pulseISR1, true); // Привязываем прерывание к таймеру 1
-    break;
-
-  case 2:
-    // Перенастройка таймера 2
-    // timerAttachInterrupt(timer2, pulseISR2, true);
-    if (timer2_flag == 0)
-    {
-      Serial.println("ERROR 2_1");
-      timerDetachInterrupt(timer2); // Отключаем прерывание от текущего таймера 1
-    }
-    timer2_flag = 0;
-
-    FLAG_WORK_2 = 1;
-    NEWpulseHighDuration2 = highTime;
-    NEWpulseLowDuration2 = lowTime;
-    timerAlarmWrite(timer2, pulseHighDuration2 * 1000, true); // Запускаем таймер для импульса HIGH пина 2
-    // pulseState2 = 0;
-    Serial.println("ERROR 2");
-    timerAttachInterrupt(timer2, pulseISR2, true); // Привязываем прерывание к таймеру 2
-    break;
-  }
-  Serial.print("lowTime - ");
-  Serial.println(lowTime);
-}
-*/
 
 ///* // тестим Работает
 void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num, byte TOTAL_MODE)
@@ -983,26 +870,31 @@ void TOTAL_CHECK()
   }
 }
 
-float adapt_P(float X, float Lowest_Y, float Highest_Y)
+float adapt_P(float X, float Lowest_Y, float Highest_Y) //Ошибка, наим, наиб
 {
 float Y;
 X = abs(X);
-Y = 1/X;
+if (X > 799) X = 799;
+Y = -1500 / (X-800); //0.075 * X;
+Y -= 3.5;
+
 //Y = -5 * X + Highest_Y;
 
 if (Y < Lowest_Y) Y = Lowest_Y;
 if (Y > Highest_Y) Y = Highest_Y;
 
+
+Serial.print(">Kp:");
+  Serial.println(Y);
 return Y;
 }
 
 float adapt_D(float X, float Lowest_Y, float Highest_Y)
 {
 float Y;
+X = abs(X);
+Y = -32*X + 8000;
 
-Y = 1/X;
-
-Y = abs(Y);
 
 if (Y < Lowest_Y) Y = Lowest_Y;
 if (Y > Highest_Y) Y = Highest_Y;
