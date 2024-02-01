@@ -97,7 +97,7 @@ Serial.println("______");
   // Закрываем файл
   dataFile.close();
 
-  delay(1000);
+  delay(10);
   
 }
 
