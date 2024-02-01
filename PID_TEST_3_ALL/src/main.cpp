@@ -168,6 +168,8 @@ void configurePulsee(unsigned int highTime, unsigned int lowTime, int Motor_Num,
 ///////
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
+float RealHeight(float Height);
+void RealDist();
 void configurePWM(int dutyCycle, byte Motor_NUM, int high_impulse);
 void serialPWM();
 void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float Ku, float HIGH_VAL, float LOW_VAL);
@@ -303,6 +305,7 @@ void loop()
   float dist_2 = convertToMillimeters(ReadAndFilterUS(ina219_2.getCurrent_mA(), 2));
   delay(1);
 
+  RealDist();
 
   Serial.print(">dist_1:");
   Serial.println(dist_1);
@@ -310,7 +313,7 @@ void loop()
   Serial.print(">dist_2:");
   Serial.println(dist_2);
 
-   PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
+  //PID_HEIGHT(dist_1, dist_2, 40, 0, 0, 1200, 1000);
 
    PID_HEIGHT(5000, 5000, 40, 0, 0, 1200, 1000);
 
@@ -489,7 +492,44 @@ float convertToMillimeters(float sensorValue)
 
   millimeters = ceil(millimeters);
   
+  millimeters = RealHeight(millimeters);
+
   return millimeters;
+}
+
+float RealHeight(float Height)
+{
+  float b = 0.966; //значение косинуса
+  float p = 463; //высота от датчика до нижней части штанги
+
+  Height = Height * b - p; //высчитываем высоту через гипотенузу
+
+  return Height; //
+}
+
+void RealDist()
+{
+
+if (dist_1 == dist_2) return;
+
+float Center_Length = 15770; //длина центрального сегмента 
+float Side_Length = 4149;// Длина бокового сегмента
+
+float delta_dist = abs(dist_1 - dist_2); //разница высот
+float tang = delta_dist / Center_Length; //находим тангенс наклона
+float delta_Realdist = Side_Length * tang;// находим дельту высоты на краю
+
+if (dist_1 > dist_2)// Там, где больше значение, значит туда штанга поднята, а значит край штанги выше
+{
+  dist_1 =+ delta_Realdist;
+  dist_2 =- delta_Realdist;
+}
+else if (dist_1 < dist_2)
+{
+  dist_1 =- delta_Realdist;
+  dist_2 =+ delta_Realdist;
+}
+
 }
 
 void PID_TILT(float VAL_LEFT, float VAL_RIGHT, float Kp, float Ki, float Kd, float Ku, float HIGH_VAL, float LOW_VAL)
