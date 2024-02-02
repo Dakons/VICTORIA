@@ -13,33 +13,36 @@ unsigned long sensTimer = 0;
 //float dist_filtered_1, dist_filtered_2; // Для фильтрации
 float k;       // Коэффициент для бегущего среднего
 byte i, delta; // счётчики
+float dist_1, dist_2, ddist_filtered_1, ddist_filtered_2;
+
+int maxFileNumber;
 
 float ReadAndFilterUS(float dist, byte ina219_NUM);
 float convertToMillimeters(float sensorValue);
 float RealHeight(float Height);
 void RealDist();
+int getMaxFileNumber();
+
 void setup()
 {
   Serial.begin(115200);
 
   // Инициализация SD-карты
-  if (!SD.begin(chipSelect))
-  {
-    Serial.println("Ошибка инициализации SD-карты.");
-    while (1)
-    {
-    delay(10);
-    }
-    
+ int sdAttempts = 0;
+  while (!SD.begin(chipSelect) && sdAttempts < 20) {
+    Serial.println("Ошибка инициализации SD-карты. Повторная попытка...");
+    delay(1000);
+    sdAttempts++;
   }
-  // Открываем файл на добавление данных
-  dataFile = SD.open("/data.txt", FILE_WRITE);
 
-  // Записываем заголовок таблицы
-  dataFile.println("Time,Sensor_1,Sensor_2,Sensor_1_F,Sensor_2_F");
+  if (sdAttempts >= 20) {
+    Serial.println("Не удалось инициализировать SD-карту. Проверьте подключение.");
+    while (1);
+  }
+  Serial.println("SD-карта инициализирована успешно!");
 
-  // Закрываем файл
-  dataFile.close();
+
+ 
 
   // Инициализация датчиков тока
   Wire.begin(21, 22);
@@ -63,33 +66,51 @@ void setup()
       delay(10);
     }
   }
+
+  // Определяем номер файла с самым большим номером
+  maxFileNumber = getMaxFileNumber();
+  Serial.print("Максимальный номер файла: ");
+  Serial.println(maxFileNumber);
+
+  // Открываем новый файл с увеличенным на 1 номером
+  dataFile = SD.open("/data_Sonar_" + String(maxFileNumber + 1) + ".txt", FILE_WRITE);
+
+ // Записываем заголовок таблицы
+  dataFile.println("Time,Sensor_1,Sensor_2,Sensor_1_F,Sensor_2_F");
+
+  // Закрываем файл
+  dataFile.close();
+
+  // Обновляем номер в файле
+  dataFile = SD.open("/max_file_number.txt", FILE_WRITE);
+  dataFile.println(maxFileNumber + 1);
+  dataFile.close();
+
+
 }
+
+
+
+
 
 void loop()
 {
   // Чтение и фильтрация данных с УЗ-датчиков
 
-  float dist_1 = ina219_1.getCurrent_mA();
-  float dist_2 = ina219_2.getCurrent_mA();
+  dist_1 = ina219_1.getCurrent_mA();
+  dist_2 = ina219_2.getCurrent_mA();
 
   
-  float ddist_filtered_1 = ReadAndFilterUS(dist_1, 1);
+  ddist_filtered_1 = ReadAndFilterUS(dist_1, 1);
   delay(1);
 
-  float ddist_filtered_2 = ReadAndFilterUS(dist_2, 2);
+  ddist_filtered_2 = ReadAndFilterUS(dist_2, 2);
   delay(1);
 
-
-Serial.println(dist_1);
-Serial.println(dist_2);
-
-Serial.println(ddist_filtered_1);
-Serial.println(ddist_filtered_2);
-Serial.println("______");
-
+  RealDist();
   // Открываем файл на добавление данных
 
-  dataFile = SD.open("/data.txt", FILE_APPEND);
+  dataFile = SD.open("/data_Sonar_" + String(maxFileNumber + 1) + ".txt", FILE_APPEND);
 
   // Записываем данные в файл
   
@@ -98,7 +119,7 @@ Serial.println("______");
   // Закрываем файл
   dataFile.close();
 
-  delay(10);
+  //delay(10);
   
 }
 
@@ -201,7 +222,56 @@ float convertToMillimeters(float sensorValue)
   float millimeters = ((sensorValue - minSensorValue) / (maxSensorValue - minSensorValue)) * (maxMillimeters - minMillimeters) + minMillimeters;
 
   millimeters = ceil(millimeters);
-  
+  millimeters = RealHeight(millimeters);
   return millimeters;
 }
 
+float RealHeight(float Height)
+{
+  float b = 0.966; //значение косинуса
+  float p = 463; //высота от датчика до нижней части штанги
+
+  Height = Height * b - p; //высчитываем высоту через гипотенузу
+
+  return Height; //
+}
+
+void RealDist()
+
+{
+
+if (ddist_filtered_1 == ddist_filtered_2) return;
+
+float Center_Length = 15770; //длина центрального сегмента 
+float Side_Length = 4149;// Длина бокового сегмента
+
+float delta_dist = abs(ddist_filtered_1 - ddist_filtered_2); //разница высот
+float tang = delta_dist / Center_Length; //находим тангенс наклона
+float delta_Realdist = Side_Length * tang;// находим дельту высоты на краю
+
+if (ddist_filtered_1 > ddist_filtered_2)// Там, где больше значение, значит туда штанга поднята, а значит край штанги выше
+{
+  ddist_filtered_1 =+ delta_Realdist;
+  ddist_filtered_2 =- delta_Realdist;
+}
+else if (ddist_filtered_1 < ddist_filtered_2)
+{
+  ddist_filtered_1 =- delta_Realdist;
+  ddist_filtered_2 =+ delta_Realdist;
+}
+
+}
+
+int getMaxFileNumber() 
+{
+  int maxFileNumber = 0;
+
+  // Читаем текущий номер из файла
+  File maxFile = SD.open("/max_file_number.txt", FILE_READ);
+  if (maxFile) {
+    maxFileNumber = maxFile.parseInt();
+    maxFile.close();
+  }
+
+  return maxFileNumber;
+}

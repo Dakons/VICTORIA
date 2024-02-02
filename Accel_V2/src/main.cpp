@@ -6,12 +6,12 @@
 const int chipSelect = 5; // Пин CS (Chip Select) для SD-карты
 File dataFile;            // Объект для работы с файлом на SD-карте
 
-
 #define MPU6050_ADDRESS 0x68 // Адрес MPU6050 по умолчанию
-
 Adafruit_MPU6050 mpu;
+int maxFileNumber;
 
-
+// Функция для определения номера файла с самым большим номером
+int getMaxFileNumber();
 
 void setup() {
   Serial.begin(115200);
@@ -24,10 +24,7 @@ void setup() {
 
   mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
 
-
-
-
-  int sdAttempts = 0;
+   int sdAttempts = 0;
   while (!SD.begin(chipSelect) && sdAttempts < 20) {
     Serial.println("Ошибка инициализации SD-карты. Повторная попытка...");
     delay(1000);
@@ -38,10 +35,15 @@ void setup() {
     Serial.println("Не удалось инициализировать SD-карту. Проверьте подключение.");
     while (1);
   }
-  
-Serial.println("SD-карта инициализирована успешно!");
- // Открываем файл на добавление данных
-  dataFile = SD.open("/data_Accel.txt", FILE_WRITE);
+  Serial.println("SD-карта инициализирована успешно!");
+
+  // Определяем номер файла с самым большим номером
+  maxFileNumber = getMaxFileNumber();
+  Serial.print("Максимальный номер файла: ");
+  Serial.println(maxFileNumber);
+
+  // Открываем новый файл с увеличенным на 1 номером
+  dataFile = SD.open("/data_Accel_" + String(maxFileNumber + 1) + ".txt", FILE_WRITE);
 
   // Записываем заголовок таблицы
   dataFile.println("Time,Accel.X,Accel.Y,Gyro.X,Gyro.Y,Gyro.Z,Temp");
@@ -49,20 +51,23 @@ Serial.println("SD-карта инициализирована успешно!")
   // Закрываем файл
   dataFile.close();
 
-
+  // Обновляем номер в файле
+  dataFile = SD.open("/max_file_number.txt", FILE_WRITE);
+  dataFile.println(maxFileNumber + 1);
+  dataFile.close();
 }
-
 
 void loop() 
 {
-  
   sensors_event_t a, g, temp;
 
   mpu.getEvent(&a, &g, &temp);
 
-    // Открываем файл на добавление данных
+  // Получаем текущий номер файла с самым большим номером
+  
 
-  dataFile = SD.open("/data_Accel.txt", FILE_APPEND);
+  // Открываем новый файл с увеличенным на 1 номером
+  dataFile = SD.open("/data_Accel_" + String(maxFileNumber + 1) + ".txt", FILE_APPEND);
 
   // Записываем данные в файл
 
@@ -72,4 +77,19 @@ void loop()
   dataFile.close();
 
   delay(10);
+}
+
+// Функция для определения номера файла с самым большим номером
+int getMaxFileNumber() 
+{
+  int maxFileNumber = 0;
+
+  // Читаем текущий номер из файла
+  File maxFile = SD.open("/max_file_number.txt", FILE_READ);
+  if (maxFile) {
+    maxFileNumber = maxFile.parseInt();
+    maxFile.close();
+  }
+
+  return maxFileNumber;
 }
